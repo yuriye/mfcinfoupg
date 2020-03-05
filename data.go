@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-func init() {
-	fmt.Println("Init")
-}
-
 type Config struct {
 	csvdirectory string
 	dbcon        dbcon
