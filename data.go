@@ -12,7 +12,8 @@ import (
 
 type Config struct {
 	csvdirectory string
-	dbcon        dbcon
+
+	dbcon dbcon
 }
 
 type dbcon struct {
