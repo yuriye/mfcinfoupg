@@ -68,6 +68,7 @@ type Relocation struct {
 func GetArray(csvFName string) ([][]string, error) {
 	f, err := os.Open(csvFName)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	defer f.Close()
