@@ -55,7 +55,7 @@ func UpgradePositions(csvFName string, conn *pgx.Conn) {
 		}
 		if name != pos.name || arc != pos.arc {
 			_, err := conn.Exec(context.Background(),
-				"UPDATE positions SET name = $2, arc = $3 WHERE position_id = $1",
+				"UPDATE positions SET name = $2,  arc = $3 WHERE position_id = $1",
 				pos.id, pos.name, pos.arc)
 			if err != nil {
 				fmt.Println(err)
