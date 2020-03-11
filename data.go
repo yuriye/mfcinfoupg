@@ -28,6 +28,10 @@ type NamedEntity struct {
 	arc  bool
 }
 
+func (ne NamedEntity) GetId() int {
+	return ne.id
+}
+
 type Position struct {
 	NamedEntity
 }
@@ -40,9 +44,13 @@ type Division struct {
 type Employee struct {
 	NamedEntity
 	humanId    int
-	tabN       string
+	tabNomer   int
 	divisionId int
 	positionId int
+}
+
+func (emp Employee) GetTabnomer() int {
+	return emp.tabNomer
 }
 
 type Human struct {
@@ -155,11 +163,11 @@ func GetStaff(csvFName string) ([]Employee, error) {
 	for ind, name := range arr[0] {
 		fieldNames[name] = ind
 	}
-	idInd := fieldNames["Id"]
-	nameInd := fieldNames["Name"]
+	idInd := fieldNames["Tabn"]
+	//nameInd := fieldNames["Name"]
 	arcInd := fieldNames["Archive"]
 	humanIdInd := fieldNames["Fizlist"]
-	tabNInd := fieldNames["Tabn"]
+	tabNomerInd := fieldNames["Tabnomer"]
 	divisionIdInd := fieldNames["Podr"]
 	positionIdInd := fieldNames["Dolg"]
 
@@ -169,16 +177,16 @@ func GetStaff(csvFName string) ([]Employee, error) {
 		emp = Employee{}
 		emp.id, err = strconv.Atoi(rec[idInd])
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			continue
 		}
-		emp.name = strings.Trim(rec[nameInd], " ")
+		//emp.name = strings.Trim(rec[nameInd], " ")
 
 		if rec[arcInd] == "1" {
 			emp.arc = true
 		}
 		emp.humanId, _ = strconv.Atoi(rec[humanIdInd])
-		emp.tabN = strings.Trim(rec[tabNInd], " ")
+		emp.tabNomer, _ = strconv.Atoi(rec[tabNomerInd])
 		emp.positionId, _ = strconv.Atoi(rec[positionIdInd])
 		emp.divisionId, _ = strconv.Atoi(rec[divisionIdInd])
 		recs = append(recs, emp)
@@ -198,8 +206,8 @@ func GetPeople(csvFName string) ([]Human, error) {
 	}
 	idInd := fieldNames["Id"]
 	surnameInd := fieldNames["Name"]
-	firstnameInd := fieldNames["Name"]
-	patronymicInd := fieldNames["Name"]
+	firstnameInd := fieldNames["Fname"]
+	patronymicInd := fieldNames["Lname"]
 	arcInd := fieldNames["Archive"]
 	recs := make([]Human, 0, 50)
 	var hum Human
