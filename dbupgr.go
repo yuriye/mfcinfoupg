@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func UpgradePositions(csvFName string, conn *pgx.Conn) {
@@ -201,5 +202,37 @@ func UpgradeStaff(csvFName string, conn *pgx.Conn) {
 			}
 		}
 
+	}
+}
+
+func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
+	var employeeId, relocationtypeId, positionId, divisionId int
+	var date, datee, dated time.Time
+
+	inRelocs, _ := GetRelocations(csvFName)
+	for _, reln := range inRelocs {
+		err := conn.QueryRow(context.Background(),
+			"SELECT employee_id, relocationtype_id, position_id, division_id, date, datee, dated FROM relocations WHERE relocation_id = $1", reln.id).
+			Scan(&employeeId, &relocationtypeId, &positionId, &divisionId, &date, &datee, &dated)
+		if err != nil {
+			fmt.Println(err)
+			_, err := conn.Exec(context.Background(),
+				"insert into relocations (relocation_id, employee_id, relocationtype_id, position_id, division_id, date, datee, dated) values ($1, $2, $3, $4, $5, $6, $7, $8)",
+				reln.id, reln.employeeId, reln.relocationTypeId, reln.positionId, reln.divisionId, reln.date, reln.dateE, reln.dateD)
+			if err != nil {
+				log.Println(err)
+			}
+			continue
+		}
+		if reln.employeeId != employeeId || reln.relocationTypeId != relocationtypeId || reln.positionId != positionId ||
+			reln.divisionId != divisionId || reln.date != date || reln.dateE != datee || reln.dateD != dated {
+			_, err := conn.Exec(context.Background(),
+				"UPDATE relocations SET employee_id = $2, relocationtype_id = $3, position_id = $4, division_id = $5, date = $6, "+
+					"datee = $7, dated = $8 WHERE relocation_id = $1",
+				reln.id, reln.employeeId, reln.relocationTypeId, reln.positionId, reln.divisionId, reln.date, reln.dateE, reln.dateD)
+			if err != nil {
+				log.Println(err)
+			}
+		}
 	}
 }

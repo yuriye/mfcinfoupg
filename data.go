@@ -62,11 +62,11 @@ type Human struct {
 }
 
 type Relocation struct {
-	id          int
-	tabN        string
-	divisionId  int
-	positionId  int
-	typeOfReloc int
+	id               int
+	employeeId       int
+	relocationTypeId int
+	divisionId       int
+	positionId       int
 	//Стандартная дата Кларион - это число дней, прошедших с 28 декабря 1800 года.
 	date  time.Time
 	dateE time.Time
@@ -76,7 +76,7 @@ type Relocation struct {
 func GetArray(csvFName string) ([][]string, error) {
 	f, err := os.Open(csvFName)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return nil, err
 	}
 	defer f.Close()
@@ -241,7 +241,7 @@ func GetRelocations(csvFName string) ([]Relocation, error) {
 		fieldNames[name] = ind
 	}
 	idInd := fieldNames["Id"]
-	tabNInd := fieldNames["Tabn"]
+	employeeIdInd := fieldNames["Tabn"]
 	divisionIdInd := fieldNames["Podr"]
 	positionIdInd := fieldNames["Dolg"]
 	typeOfRelocInd := fieldNames["Vidper"]
@@ -259,10 +259,10 @@ func GetRelocations(csvFName string) ([]Relocation, error) {
 			continue
 		}
 
-		rel.tabN = strings.Trim(rec[tabNInd], " ")
+		rel.employeeId, _ = strconv.Atoi(rec[employeeIdInd])
 		rel.positionId, _ = strconv.Atoi(rec[positionIdInd])
 		rel.divisionId, _ = strconv.Atoi(rec[divisionIdInd])
-		rel.typeOfReloc, _ = strconv.Atoi(rec[typeOfRelocInd])
+		rel.relocationTypeId, _ = strconv.Atoi(rec[typeOfRelocInd])
 
 		tmp, err := strconv.Atoi(rec[dateInd])
 		if err == nil {
