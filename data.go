@@ -58,6 +58,7 @@ type Human struct {
 	surname    string
 	firstname  string
 	patronymic string
+	gender     bool
 	arc        bool
 }
 
@@ -71,6 +72,63 @@ type Relocation struct {
 	date  time.Time
 	dateE time.Time
 	dateD time.Time
+}
+
+type TimesheetDay struct {
+	typeOfDay    int
+	workDuration float64
+}
+
+//Табель отработанного времени
+type Timesheet struct {
+	id            int
+	employeeId    int
+	month         time.Time
+	daysTotal     int
+	hoursTotal    float64
+	timesheetDays []TimesheetDay
+}
+
+func GetTimesheets(csvFName string) ([]Timesheet, error) {
+	thisYear := time.Now().Year()
+	thisYearStr := fmt.Sprintf("%d", thisYear)
+	arr, err := GetArray(strings.Replace(csvFName, "yyyy.", thisYearStr+".", 1))
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	fieldNames := make(map[string]int)
+	for ind, name := range arr[0] {
+		fieldNames[name] = ind
+	}
+
+	employeeIdInd := fieldNames["Tabn"]
+	monthInd := fieldNames["Mm"]
+	daysTotalInd := fieldNames["Day"]
+	hoursTotalInd := fieldNames["Hour"]
+	recs := make([]Timesheet, 0, 50)
+
+	for _, rec := range arr[1:] {
+		tmsheet := Timesheet{}
+		tmsheet.employeeId, _ = strconv.Atoi(rec[employeeIdInd])
+		monthNumber, _ := strconv.Atoi(rec[monthInd])
+		tmsheet.month = time.Date(thisYear, time.Month(monthNumber), 1, 0, 0, 0, 0, time.UTC)
+		tmsheet.hoursTotal, _ = strconv.ParseFloat(rec[hoursTotalInd], 64)
+		tmsheet.daysTotal, _ = strconv.Atoi(rec[daysTotalInd])
+		daysInMonth := time.Date(thisYear, time.Month(monthNumber)+1, 0, 0, 0, 0, 0, time.UTC).Day()
+		tmsheet.timesheetDays = make([]TimesheetDay, daysInMonth)
+		for d := 0; d < daysInMonth; d++ {
+			tsDay := TimesheetDay{}
+			ind := fieldNames["Tabel["+strconv.Itoa(d)+"]"]
+			tsDay.typeOfDay, _ = strconv.Atoi(rec[ind])
+			ind = fieldNames["Tabelh["+strconv.Itoa(d)+"]"]
+			tsDay.workDuration, _ = strconv.ParseFloat(rec[ind], 64)
+			tmsheet.timesheetDays = append(tmsheet.timesheetDays, tsDay)
+		}
+		recs = append(recs, tmsheet)
+	}
+	return recs, nil
 }
 
 func GetArray(csvFName string) ([][]string, error) {
@@ -208,6 +266,7 @@ func GetPeople(csvFName string) ([]Human, error) {
 	surnameInd := fieldNames["Name"]
 	firstnameInd := fieldNames["Fname"]
 	patronymicInd := fieldNames["Lname"]
+	genderInd := fieldNames["Pol"]
 	arcInd := fieldNames["Archive"]
 	recs := make([]Human, 0, 50)
 	var hum Human
@@ -215,13 +274,15 @@ func GetPeople(csvFName string) ([]Human, error) {
 		hum = Human{}
 		hum.id, err = strconv.Atoi(rec[idInd])
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			continue
 		}
 		hum.surname = strings.Trim(rec[surnameInd], " ")
 		hum.firstname = strings.Trim(rec[firstnameInd], " ")
 		hum.patronymic = strings.Trim(rec[patronymicInd], " ")
-
+		if rec[genderInd] == "1" {
+			hum.gender = true
+		}
 		if rec[arcInd] == "1" {
 			hum.arc = true
 		}

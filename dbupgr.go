@@ -5,47 +5,20 @@ import (
 	"fmt"
 	"github.com/jackc/pgx"
 	"log"
-	"strconv"
-	"strings"
 	"time"
 )
 
 func UpgradePositions(csvFName string, conn *pgx.Conn) {
-	arr, err := GetArray(csvFName)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	fieldNames := make(map[string]int)
-	for ind, name := range arr[0] {
-		fieldNames[name] = ind
-	}
-	idInd := fieldNames["Id"]
-	nameInd := fieldNames["Name"]
-	arcInd := fieldNames["Archive"]
-	var pos Position
-
 	var name string
 	var arc bool
-
-	for _, rec := range arr[1:] {
-		pos = Position{}
-		pos.id, err = strconv.Atoi(rec[idInd])
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		pos.name = strings.Trim(rec[nameInd], " ")
-		if rec[arcInd] == "1" {
-			pos.arc = true
-		}
-
+	positions, _ := GetPositions(csvFName)
+	for _, pos := range positions {
 		err := conn.QueryRow(context.Background(),
-			"select name, arc from positions where position_id = $1", pos.id).Scan(&name, &arc)
+			"SELECT name, arc FROM positions WHERE position_id = $1", pos.id).Scan(&name, &arc)
 		if err != nil {
 			if !pos.arc {
 				_, err := conn.Exec(context.Background(),
-					"insert into positions (position_id, name, arc) values ($1, $2, $3)",
+					"INSERT INTO positions (position_id, name, arc) VALUES ($1, $2, $3)",
 					pos.id, pos.name, pos.arc)
 				if err != nil {
 					fmt.Println(err)
@@ -65,39 +38,16 @@ func UpgradePositions(csvFName string, conn *pgx.Conn) {
 }
 
 func UpgradeDivisions(csvFName string, conn *pgx.Conn) {
-	arr, err := GetArray(csvFName)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	fieldNames := make(map[string]int)
-
-	for ind, name := range arr[0] {
-		fieldNames[name] = ind
-	}
-	idInd := fieldNames["Id"]
-	nameInd := fieldNames["Name"]
-	arcInd := fieldNames["Archive"]
-	var div Division
-	for _, rec := range arr[1:] {
-		div = Division{}
-		div.id, err = strconv.Atoi(rec[idInd])
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		div.name = strings.Trim(rec[nameInd], " ")
-		if rec[arcInd] == "1" {
-			div.arc = true
-		}
-		var name string
-		var arc bool
+	var name string
+	var arc bool
+	divisions, _ := GetDivisions(csvFName)
+	for _, div := range divisions {
 		err := conn.QueryRow(context.Background(),
-			"select name, arc from divisions where division_id = $1", div.id).Scan(&name, &arc)
+			"SELECT name, arc FROM divisions WHERE division_id = $1", div.id).Scan(&name, &arc)
 		if err != nil {
 			if !div.arc {
 				_, err := conn.Exec(context.Background(),
-					"insert into divisions (division_id, name, arc) values ($1, $2, $3)",
+					"INSERT INTO divisions (division_id, name, arc) VALUES ($1, $2, $3)",
 					div.id, div.name, div.arc)
 				if err != nil {
 					log.Println(err)
@@ -114,57 +64,33 @@ func UpgradeDivisions(csvFName string, conn *pgx.Conn) {
 			}
 		}
 	}
+
 }
 
 func UpgradePeople(csvFName string, conn *pgx.Conn) {
-	arr, err := GetArray(csvFName)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	fieldNames := make(map[string]int)
-	for ind, name := range arr[0] {
-		fieldNames[name] = ind
-	}
-	idInd := fieldNames["Id"]
-	surnameInd := fieldNames["Name"]
-	firstnameInd := fieldNames["Fname"]
-	patronymicInd := fieldNames["Lname"]
-	arcInd := fieldNames["Archive"]
-	var hum Human
-	for _, rec := range arr[1:] {
-		hum = Human{}
-		hum.id, err = strconv.Atoi(rec[idInd])
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		hum.surname = strings.Trim(rec[surnameInd], " ")
-		hum.firstname = strings.Trim(rec[firstnameInd], " ")
-		hum.patronymic = strings.Trim(rec[patronymicInd], " ")
-		csvname := hum.surname + " " + hum.firstname + " " + hum.patronymic
-		if rec[arcInd] == "1" {
-			hum.arc = true
-		}
-		var name string
-		var arc bool
+	var name string
+	var gender, arc bool
+	people, _ := GetPeople(csvFName)
+	for _, hum := range people {
+		fullname := hum.surname + " " + hum.firstname + " " + hum.patronymic
 		err := conn.QueryRow(context.Background(),
-			"select name, arc from people where human_id = $1", hum.id).Scan(&name, &arc)
+			"SELECT name, gender, arc FROM people WHERE human_id = $1", hum.id).Scan(&name, &gender, &arc)
 		if err != nil {
 			if !hum.arc {
 				_, err := conn.Exec(context.Background(),
-					"insert into people (human_id, name, arc) values ($1, $2, $3)",
-					hum.id, csvname, hum.arc)
+					"INSERT INTO people (human_id, name, gender, arc) VALUES ($1, $2, $3, $4)",
+					hum.id, fullname, hum.gender, hum.arc)
 				if err != nil {
 					log.Println(err)
 				}
 			}
 			continue
 		}
-		if name != csvname || arc != hum.arc {
+
+		if name != fullname || gender != hum.gender || arc != hum.arc {
 			_, err := conn.Exec(context.Background(),
-				"UPDATE people SET name = $2, arc = $3 WHERE human_id = $1",
-				hum.id, csvname, hum.arc)
+				"UPDATE people SET name = $2, gender = $3, arc = $4 WHERE human_id = $1",
+				hum.id, fullname, hum.gender, hum.arc)
 			if err != nil {
 				log.Println(err)
 			}
@@ -179,12 +105,12 @@ func UpgradeStaff(csvFName string, conn *pgx.Conn) {
 	inStaff, _ := GetStaff(csvFName)
 	for _, emp := range inStaff {
 		err := conn.QueryRow(context.Background(),
-			"select human_id, tabnomer, position_id, division_id, arc from staff where employee_id = $1", emp.id).
+			"SELECT human_id, tabnomer, position_id, division_id, arc FROM staff WHERE employee_id = $1", emp.id).
 			Scan(&humanId, &tabNomer, &positionId, &divisionId, &arc)
 		if err != nil {
 			if !emp.arc {
 				_, err := conn.Exec(context.Background(),
-					"insert into staff (employee_id, human_id, tabnomer, position_id, division_id, arc) values ($1, $2, $3, $4, $5, $6)",
+					"insert into staff (employee_id, human_id, tabnomer, position_id, division_id, arc) VALUES ($1, $2, $3, $4, $5, $6)",
 					emp.id, emp.humanId, emp.tabNomer, emp.positionId, emp.divisionId, emp.arc)
 				if err != nil {
 					log.Println(err)
@@ -206,10 +132,11 @@ func UpgradeStaff(csvFName string, conn *pgx.Conn) {
 }
 
 func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
+
 	var employeeId, relocationtypeId, positionId, divisionId int
 	var date, datee, dated time.Time
-
 	inRelocs, _ := GetRelocations(csvFName)
+
 	for _, reln := range inRelocs {
 		err := conn.QueryRow(context.Background(),
 			"SELECT employee_id, relocationtype_id, position_id, division_id, date, datee, dated FROM relocations WHERE relocation_id = $1", reln.id).
@@ -217,7 +144,7 @@ func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
 		if err != nil {
 			fmt.Println(err)
 			_, err := conn.Exec(context.Background(),
-				"insert into relocations (relocation_id, employee_id, relocationtype_id, position_id, division_id, date, datee, dated) values ($1, $2, $3, $4, $5, $6, $7, $8)",
+				"INSERT INTO relocations (relocation_id, employee_id, relocationtype_id, position_id, division_id, date, datee, dated) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
 				reln.id, reln.employeeId, reln.relocationTypeId, reln.positionId, reln.divisionId, reln.date, reln.dateE, reln.dateD)
 			if err != nil {
 				log.Println(err)
