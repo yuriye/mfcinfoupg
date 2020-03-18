@@ -1,8 +1,10 @@
 package mfcinfoupg
 
 import (
+	"crypto/md5"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -77,6 +79,7 @@ type Relocation struct {
 type TimesheetDay struct {
 	typeOfDay    int
 	workDuration float64
+	date         time.Time
 }
 
 //Табель отработанного времени
@@ -87,10 +90,11 @@ type Timesheet struct {
 	daysTotal     int
 	hoursTotal    float64
 	timesheetDays []TimesheetDay
+	md5           string
 }
 
-func GetTimesheets(csvFName string) ([]Timesheet, error) {
-	thisYear := time.Now().Year()
+func GetTimesheets(csvFName string, thisYear int) ([]Timesheet, error) {
+	//thisYear := time.Now().Year()
 	thisYearStr := fmt.Sprintf("%d", thisYear)
 	arr, err := GetArray(strings.Replace(csvFName, "yyyy.", thisYearStr+".", 1))
 	if err != nil {
@@ -107,7 +111,7 @@ func GetTimesheets(csvFName string) ([]Timesheet, error) {
 	monthInd := fieldNames["Mm"]
 	daysTotalInd := fieldNames["Day"]
 	hoursTotalInd := fieldNames["Hour"]
-	recs := make([]Timesheet, 0, 50)
+	recs := make([]Timesheet, 0, 250)
 
 	for _, rec := range arr[1:] {
 		tmsheet := Timesheet{}
@@ -118,14 +122,22 @@ func GetTimesheets(csvFName string) ([]Timesheet, error) {
 		tmsheet.daysTotal, _ = strconv.Atoi(rec[daysTotalInd])
 		daysInMonth := time.Date(thisYear, time.Month(monthNumber)+1, 0, 0, 0, 0, 0, time.UTC).Day()
 		tmsheet.timesheetDays = make([]TimesheetDay, daysInMonth)
+		tmpstr := strconv.Itoa(tmsheet.employeeId) + ";"
 		for d := 0; d < daysInMonth; d++ {
 			tsDay := TimesheetDay{}
 			ind := fieldNames["Tabel["+strconv.Itoa(d)+"]"]
 			tsDay.typeOfDay, _ = strconv.Atoi(rec[ind])
+			tmpstr += strconv.Itoa(tsDay.typeOfDay) + ";"
 			ind = fieldNames["Tabelh["+strconv.Itoa(d)+"]"]
 			tsDay.workDuration, _ = strconv.ParseFloat(rec[ind], 64)
+			tsDay.date = time.Date(thisYear, time.Month(monthNumber), d+1, 0, 0, 0, 0, time.UTC)
+			tmpstr += fmt.Sprintf("%d", tsDay.workDuration) + ";"
 			tmsheet.timesheetDays = append(tmsheet.timesheetDays, tsDay)
 		}
+		h := md5.New()
+		io.WriteString(h, tmpstr)
+		s := h.Sum(nil)
+		tmsheet.md5 = fmt.Sprintf("%x", s)
 		recs = append(recs, tmsheet)
 	}
 	return recs, nil

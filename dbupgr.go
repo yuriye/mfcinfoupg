@@ -132,7 +132,6 @@ func UpgradeStaff(csvFName string, conn *pgx.Conn) {
 }
 
 func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
-
 	var employeeId, relocationtypeId, positionId, divisionId int
 	var date, datee, dated time.Time
 	inRelocs, _ := GetRelocations(csvFName)
@@ -159,6 +158,66 @@ func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
 				reln.id, reln.employeeId, reln.relocationTypeId, reln.positionId, reln.divisionId, reln.date, reln.dateE, reln.dateD)
 			if err != nil {
 				log.Println(err)
+			}
+		}
+	}
+}
+
+func UpgradeTimesheets(csvFName string, conn *pgx.Conn) {
+	timesheets, _ := GetTimesheets(csvFName, 2020)
+	var timesheetId, employeeId, daystotal int
+	var yearMonth time.Time
+	var hourstotal float64
+	var md5 string
+
+	for _, tms := range timesheets {
+		if err := conn.QueryRow(context.Background(),
+			"SELECT timesheet_id, employee_id, year_month, daystotal, hourstotal, md5 FROM timesheets WHERE employee_id = $1 AND yearMonth = $2",
+			tms.employeeId, tms.month).
+			Scan(&timesheetId, &employeeId, &yearMonth, &daystotal, &hourstotal, &md5); err != nil {
+			_, err := conn.Exec(context.Background(),
+				"INSERT INTO timesheets (employee_id, year_month, daystotal, hourstotal, md5) VALUES ($1, $2, $3, $4, $5)",
+				tms.employeeId, tms.month, tms.daysTotal, tms.hoursTotal, tms.md5)
+			if err != nil {
+				fmt.Print("1:")
+				fmt.Println(err)
+			}
+			for _, day := range tms.timesheetDays {
+				_, err := conn.Exec(context.Background(),
+					"INSERT INTO timesheetdays (timesheet_id, type, duration, date) VALUES ($1, $2, $3, $4)",
+					tms.id, day.typeOfDay, day.workDuration, day.date)
+				if err != nil {
+					fmt.Print("2:")
+					fmt.Println(err)
+				}
+			}
+
+			continue
+		}
+		if tms.md5 != md5 || tms.employeeId != employeeId || tms.hoursTotal != hourstotal || tms.daysTotal != daystotal || tms.month != yearMonth {
+			_, err := conn.Exec(context.Background(),
+				"UPDATE timesheets SET employee_id = $2, year_month = $3, daystotal = $4, hourstotal = $5, md5 = $6 WHERE timesheet_id = $1",
+				tms.id, tms.employeeId, tms.month, tms.daysTotal, tms.hoursTotal, tms.md5)
+			if err != nil {
+				fmt.Print("3:")
+				fmt.Println(err)
+			}
+			if tms.md5 != md5 {
+				_, err := conn.Exec(context.Background(),
+					"DELETE FROM timesheetsdays WHERE timesheet_id = $1", tms.id)
+				if err != nil {
+					fmt.Print("4:")
+					fmt.Println(err)
+				}
+				for _, day := range tms.timesheetDays {
+					_, err := conn.Exec(context.Background(),
+						"INSERT INTO timesheetdays (timesheet_id, type, duration, date) VALUES ($1, $2, $3, $4)",
+						tms.id, day.typeOfDay, day.workDuration, day.date)
+					if err != nil {
+						fmt.Print("5:")
+						log.Println(err)
+					}
+				}
 			}
 		}
 	}
