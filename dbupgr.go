@@ -164,7 +164,7 @@ func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
 }
 
 func UpgradeTimesheets(csvFName string, conn *pgx.Conn) {
-	timesheets, _ := GetTimesheets(csvFName, 2020)
+	timesheets, _ := GetTimesheets(csvFName, time.Now().Year())
 	var timesheetId, employeeId, daystotal int
 	var yearMonth time.Time
 	var hourstotal float64

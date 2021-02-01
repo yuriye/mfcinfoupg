@@ -94,8 +94,9 @@ type Timesheet struct {
 }
 
 func GetTimesheets(csvFName string, thisYear int) ([]Timesheet, error) {
-	//thisYear := time.Now().Year()
-	thisYearStr := fmt.Sprintf("%d", thisYear)
+	thisYearInt := time.Now().Year()
+	thisYearStr := fmt.Sprintf("%d", thisYearInt)
+	println(thisYearStr)
 	arr, err := GetArray(strings.Replace(csvFName, "yyyy.", thisYearStr+".", 1))
 	if err != nil {
 		log.Fatal(err)
