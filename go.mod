@@ -1,4 +1,4 @@
-module mfcinfoupg
+module github.com/yuriye/mfcinfoupg
 
 go 1.16
 
