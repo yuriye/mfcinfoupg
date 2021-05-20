@@ -76,16 +76,6 @@ type Relocation struct {
 	dateD time.Time
 }
 
-type Vacation struct {
-	id         int
-	employeeId int
-	tabNomer   int
-	//Стандартная дата Кларион - это число дней, прошедших с 28 декабря 1800 года.
-	dateStart time.Time
-	dateEnd   time.Time
-	days      int
-}
-
 type TimesheetDay struct {
 	typeOfDay    int
 	workDuration float64
@@ -283,6 +273,15 @@ func GetStaff(csvFName string) ([]Employee, error) {
 	return recs, nil
 }
 
+type Vacation struct {
+	id         int
+	employeeId int
+	tabNomer   int
+	dateStart  time.Time
+	dateEnd    time.Time
+	days       int
+}
+
 func GetVacations(csvFName string) ([]Vacation, error) {
 	arr, err := GetArray(csvFName)
 
@@ -317,7 +316,7 @@ func GetVacations(csvFName string) ([]Vacation, error) {
 		}
 		tmp, err = strconv.Atoi(rec[dateEndInd])
 		if err == nil {
-			vacation.dateStart = ClarT2UnixT(int64(tmp))
+			vacation.dateEnd = ClarT2UnixT(int64(tmp))
 		}
 		vacation.days, _ = strconv.Atoi(rec[daysInd])
 

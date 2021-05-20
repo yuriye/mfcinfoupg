@@ -3,9 +3,10 @@ package mfcinfoupg
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4"
 	"log"
 	"time"
+
+	"github.com/jackc/pgx/v4"
 )
 
 func UpgradePositions(csvFName string, conn *pgx.Conn) {
@@ -156,6 +157,23 @@ func UpgradeVacations(csvFName string, conn *pgx.Conn) {
 			"SELECT vacation_id, employee_id, date_start, date_end, days FROM vacations WHERE vacation_id = $1", vacation.id).
 			Scan(&vacationId, &employeeId, &startDate, &endDate, &days)
 		if err != nil {
+			_, err := conn.Exec(context.Background(),
+				"insert into vacations (vacation_id, employee_id, date_sart, date_end, days) VALUES ($1, $2, $3, $4, $5)",
+				vacation.id, vacation.employeeId, vacation.dateStart, vacation.dateEnd, vacation.days)
+			if err != nil {
+				log.Println(err)
+			}
+			continue
+		}
+
+		if vacation.employeeId != employeeId || vacation.dateStart != startDate ||
+			vacation.dateEnd != endDate || vacation.days != days {
+			_, err := conn.Exec(context.Background(),
+				"UPDATE vacations SET vacation_id = $1, employee_id = $2, date_sart = $3, date_end = $4, days = $5",
+				vacation.id, vacation.employeeId, vacation.dateStart, vacation.dateEnd, vacation.days)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
@@ -189,6 +207,7 @@ func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
 				log.Println(err)
 			}
 		}
+
 	}
 }
 
