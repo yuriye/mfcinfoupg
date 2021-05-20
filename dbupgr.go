@@ -158,7 +158,7 @@ func UpgradeVacations(csvFName string, conn *pgx.Conn) {
 			Scan(&vacationId, &employeeId, &startDate, &endDate, &days)
 		if err != nil {
 			_, err := conn.Exec(context.Background(),
-				"insert into vacations (vacation_id, employee_id, date_sart, date_end, days) VALUES ($1, $2, $3, $4, $5)",
+				"insert into vacations (vacation_id, employee_id, date_start, date_end, days) VALUES ($1, $2, $3, $4, $5)",
 				vacation.id, vacation.employeeId, vacation.dateStart, vacation.dateEnd, vacation.days)
 			if err != nil {
 				log.Println(err)
