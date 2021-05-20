@@ -76,13 +76,23 @@ type Relocation struct {
 	dateD time.Time
 }
 
+type Vacation struct {
+	id         int
+	employeeId int
+	tabNomer   int
+	//Стандартная дата Кларион - это число дней, прошедших с 28 декабря 1800 года.
+	dateStart time.Time
+	dateEnd   time.Time
+	days      int
+}
+
 type TimesheetDay struct {
 	typeOfDay    int
 	workDuration float64
 	date         time.Time
 }
 
-//Табель отработанного времени
+// Timesheet Табель отработанного времени
 type Timesheet struct {
 	id            int
 	employeeId    int
@@ -132,11 +142,14 @@ func GetTimesheets(csvFName string, thisYear int) ([]Timesheet, error) {
 			ind = fieldNames["Tabelh["+strconv.Itoa(d)+"]"]
 			tsDay.workDuration, _ = strconv.ParseFloat(rec[ind], 64)
 			tsDay.date = time.Date(thisYear, time.Month(monthNumber), d+1, 0, 0, 0, 0, time.UTC)
-			tmpstr += fmt.Sprintf("%d", tsDay.workDuration) + ";"
+			tmpstr += fmt.Sprintf("%v", tsDay.workDuration) + ";"
 			tmsheet.timesheetDays = append(tmsheet.timesheetDays, tsDay)
 		}
 		h := md5.New()
-		io.WriteString(h, tmpstr)
+		_, err := io.WriteString(h, tmpstr)
+		if err != nil {
+			return nil, err
+		}
 		s := h.Sum(nil)
 		tmsheet.md5 = fmt.Sprintf("%x", s)
 		recs = append(recs, tmsheet)
@@ -150,7 +163,12 @@ func GetArray(csvFName string) ([][]string, error) {
 		log.Println(err)
 		return nil, err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+
+		}
+	}(f)
 	r := csv.NewReader(f)
 	r.Comma = ';'
 	records, err := r.ReadAll()
@@ -262,6 +280,50 @@ func GetStaff(csvFName string) ([]Employee, error) {
 		emp.divisionId, _ = strconv.Atoi(rec[divisionIdInd])
 		recs = append(recs, emp)
 	}
+	return recs, nil
+}
+
+func GetVacations(csvFName string) ([]Vacation, error) {
+	arr, err := GetArray(csvFName)
+
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	fieldNames := make(map[string]int)
+	for ind, name := range arr[0] {
+		fieldNames[name] = ind
+	}
+
+	idInd := fieldNames["RecNo"]
+	tabNomerInd := fieldNames["Tabn"]
+	dateStartInd := fieldNames["Dataplb"]
+	dateEndInd := fieldNames["Dataple"]
+	daysInd := fieldNames["Day"]
+	recs := make([]Vacation, 0, 50)
+	var vacation Vacation
+	for _, rec := range arr[1:] {
+		vacation = Vacation{}
+		vacation.id, err = strconv.Atoi(rec[idInd])
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		vacation.tabNomer, _ = strconv.Atoi(rec[tabNomerInd])
+		tmp, err := strconv.Atoi(rec[dateStartInd])
+		if err == nil {
+			vacation.dateStart = ClarT2UnixT(int64(tmp))
+		}
+		tmp, err = strconv.Atoi(rec[dateEndInd])
+		if err == nil {
+			vacation.dateStart = ClarT2UnixT(int64(tmp))
+		}
+		vacation.days, _ = strconv.Atoi(rec[daysInd])
+
+		recs = append(recs, vacation)
+	}
+
 	return recs, nil
 }
 

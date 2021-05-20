@@ -3,7 +3,7 @@ package mfcinfoupg
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4"
 	"log"
 	"time"
 )
@@ -129,6 +129,60 @@ func UpgradeStaff(csvFName string, conn *pgx.Conn) {
 		}
 
 	}
+}
+
+func UpgradeVacations(csvFName string, conn *pgx.Conn) {
+
+	var staffIds = map[int]int{}
+
+	rows, err := conn.Query(context.Background(), "SELECT employee_id tabnomer FROM staff")
+	if err != nil {
+		log.Println(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var employeeId, tabNomer int
+		rows.Scan(&employeeId, &tabNomer)
+		staffIds[tabNomer] = employeeId
+	}
+
+	var vacationId, employeeId, days int
+	var startDate, endDate time.Time
+
+	inVacations, _ := GetVacations(csvFName)
+
+	for _, vacation := range inVacations {
+
+		err := conn.QueryRow(context.Background(),
+			"SELECT vacation_id, employee_id, date_start, date_end, days FROM vacations WHERE vacation_id = $1", vacation.id).
+			Scan(&vacationId, &employeeId, &startDate, &endDate, &days)
+		if err != nil {
+
+		}
+
+	}
+	//		if !emp.arc {
+	//			_, err := conn.Exec(context.Background(),
+	//				"insert into staff (employee_id, human_id, tabnomer, position_id, division_id, arc) VALUES ($1, $2, $3, $4, $5, $6)",
+	//				emp.id, emp.humanId, emp.tabNomer, emp.positionId, emp.divisionId, emp.arc)
+	//			if err != nil {
+	//				log.Println(err)
+	//			}
+	//		}
+	//		continue
+	//	}
+	//	if emp.humanId != humanId || emp.positionId != positionId ||
+	//		emp.tabNomer != tabNomer || emp.divisionId != divisionId {
+	//		_, err := conn.Exec(context.Background(),
+	//			"UPDATE staff SET human_id = $2, tabnomer = $3, position_id = $4, division_id = $5, arc = $6 WHERE employee_id = $1",
+	//			emp.id, emp.humanId, emp.tabNomer, emp.positionId, emp.divisionId, emp.arc)
+	//		if err != nil {
+	//			log.Println(err)
+	//		}
+	//	}
+	//
+	//}
 }
 
 func UpgradeRelocations(csvFName string, conn *pgx.Conn) {
