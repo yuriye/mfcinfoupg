@@ -152,7 +152,7 @@ func UpgradeVacations(csvFName string, conn *pgx.Conn) {
 	inVacations, _ := GetVacations(csvFName)
 
 	for _, vacation := range inVacations {
-
+		vacation.employeeId = staffIds[vacation.tabNomer]
 		err := conn.QueryRow(context.Background(),
 			"SELECT vacation_id, employee_id, date_start, date_end, days FROM vacations WHERE vacation_id = $1", vacation.id).
 			Scan(&vacationId, &employeeId, &startDate, &endDate, &days)
