@@ -274,12 +274,11 @@ func GetStaff(csvFName string) ([]Employee, error) {
 }
 
 type Vacation struct {
-	id         int
-	employeeId int
-	tabNomer   int
-	dateStart  time.Time
-	dateEnd    time.Time
-	days       int
+	id        int
+	tabNomer  int
+	dateStart time.Time
+	dateEnd   time.Time
+	days      int
 }
 
 func GetVacations(csvFName string) ([]Vacation, error) {

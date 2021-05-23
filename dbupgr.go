@@ -133,44 +133,52 @@ func UpgradeStaff(csvFName string, conn *pgx.Conn) {
 }
 
 func UpgradeVacations(csvFName string, conn *pgx.Conn) {
-	var staffIds = map[int]int{}
-	rows, err := conn.Query(context.Background(), "SELECT employee_id tabnomer FROM staff")
+
+	_, err := conn.Exec(context.Background(),
+		"DELETE FROM public.vacations;")
 	if err != nil {
 		log.Println(err)
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var employeeId, tabNomer int
-		rows.Scan(&employeeId, &tabNomer)
-		staffIds[tabNomer] = employeeId
-	}
+	//var staffIds = map[int]int{}
+	//rows, err := conn.Query(context.Background(), "SELECT employee_id, tabnomer FROM staff")
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	//defer rows.Close()
 
-	var vacationId, employeeId, days int
+	//for rows.Next() {
+	//	var employeeId, tabNomer int
+	//	rows.Scan(&employeeId, &tabNomer)
+	//	log.Println(employeeId, tabNomer)
+	//	staffIds[tabNomer] = employeeId
+	//}
+
+	var vacationId, tabNomer, days int
 	var startDate, endDate time.Time
 
 	inVacations, _ := GetVacations(csvFName)
 
 	for _, vacation := range inVacations {
-		vacation.employeeId = staffIds[vacation.tabNomer]
+		//vacation.employeeId = staffIds[vacation.tabNomer]
 		err := conn.QueryRow(context.Background(),
-			"SELECT vacation_id, employee_id, date_start, date_end, days FROM vacations WHERE vacation_id = $1", vacation.id).
-			Scan(&vacationId, &employeeId, &startDate, &endDate, &days)
+			"SELECT vacation_id, tabnomer, date_start, date_end, days FROM vacations WHERE vacation_id = $1", vacation.id).
+			Scan(&vacationId, &tabNomer, &startDate, &endDate, &days)
 		if err != nil {
 			_, err := conn.Exec(context.Background(),
-				"insert into vacations (vacation_id, employee_id, date_start, date_end, days) VALUES ($1, $2, $3, $4, $5)",
-				vacation.id, vacation.employeeId, vacation.dateStart, vacation.dateEnd, vacation.days)
+				"insert into vacations (vacation_id, tabnomer, date_start, date_end, days) VALUES ($1, $2, $3, $4, $5)",
+				vacation.id, vacation.tabNomer, vacation.dateStart, vacation.dateEnd, vacation.days)
 			if err != nil {
 				log.Println(err)
 			}
 			continue
 		}
 
-		if vacation.employeeId != employeeId || vacation.dateStart != startDate ||
+		if vacation.tabNomer != tabNomer || vacation.dateStart != startDate ||
 			vacation.dateEnd != endDate || vacation.days != days {
 			_, err := conn.Exec(context.Background(),
-				"UPDATE vacations SET vacation_id = $1, employee_id = $2, date_sart = $3, date_end = $4, days = $5",
-				vacation.id, vacation.employeeId, vacation.dateStart, vacation.dateEnd, vacation.days)
+				"UPDATE vacations SET vacation_id = $1, tabnomer = $2, date_start = $3, date_end = $4, days = $5",
+				vacation.id, vacation.tabNomer, vacation.dateStart, vacation.dateEnd, vacation.days)
 			if err != nil {
 				log.Println(err)
 			}
